@@ -1,4 +1,5 @@
 package extractingPDB;
+
 /*** written by lina <lina.oahz@gmail.com>
  * on Sat Nov  9 22:34:23 SGT 2013
  */
@@ -19,40 +20,47 @@ import org.apache.commons.io.FileUtils;
 
 public class Extracting {
 
+	private static Map<String, String> strexp = new HashMap<String, String>();
+
+	private static String[] arguments = { "structureId", "chainId",
+			"experimentalTechnique", "releaseDate", "resolution",
+			"residueCount", "chainLength", "secondaryStructure",
+			"citationAuthor", "publicationYear", "title", "journalName", "volumeId",
+			"firstPage", "lastPage", "doi" };
+
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
-		
+
 		String inputFileName = "results.do";
 		File inFile = new File(inputFileName);
 		FileReader fr = new FileReader(inFile);
 		BufferedReader br = new BufferedReader(fr);
-		
-		Set <String> pdbs = new HashSet<String>();
-		
-		String pdbS = "					<a class=.*structureId=(.*)\">";			
+
+		Set<String> pdbs = new HashSet<String>();
+
+		String pdbS = "					<a class=.*structureId=(.*)\">";
 		Pattern pdbSp = Pattern.compile(pdbS);
-		
+
 		String line;
-		while( (line = br.readLine() ) != null ){
-			
+		while ((line = br.readLine()) != null) {
+
 			Matcher pdbmatcher = pdbSp.matcher(line);
-			
-			if(pdbmatcher.matches()){
+
+			if (pdbmatcher.matches()) {
 				pdbs.add(pdbmatcher.group(1));
-				
+
 			}
-			
+
 		}
-		
+
 		fr.close();
 		System.out.println(pdbs.size());
-		for (String s: pdbs){
-			System.out.print(s+",");
-		}
+//		for (String s : pdbs) {
+//			System.out.print(s + ",");
+//		}
 		String outputFileName = "output";
 		File output = new File(outputFileName);
-	//	String urlLink = "http://www.rcsb.org/pdb/rest/customReport?pdbids=1stp,2jef,1cdg&customReportColumns="
-	//			+ "structureId,structureTitle,experimentalTechnique";
+
 		String urlLink = "http://www.rcsb.org/pdb/rest/customReport?pdbids=1AAP,"
 				+ "%201AMB,%201AMC,%201AML,%201BA4,%201BA6,%201BJB,%201BJC,%201BRC,%201CA0,"
 				+ "%201HZ3,%201IYT,%201MWP,%201NMJ,%201OQN,%201OWT,%201QCM,%201QWP,%201QXC,"
@@ -67,50 +75,90 @@ public class Extracting {
 				+ "releaseDate,resolution,residueCount,chainLength,secondaryStructure,citationAuthor,"
 				+ "publicationYear,title,journalName,volumeId,firstPage,lastPage,"
 				+ "doi&service=wsfile&format=xml&ssa=n&primaryOnly=1";
-		//URL url = new URL(urlLink);
-		//FileUtils.copyURLToFile(url, output);
-		
+		// URL url = new URL(urlLink);
+		// FileUtils.copyURLToFile(url, output);
+
 		Set<PDB> records = new HashSet<PDB>();
-		
+
 		String linex;
-//		Integer no = 15;
-//		String regExpressions []= new String[no];
-//		Pattern patterns [] = new Pattern[no];
-//		Matcher matches[] = new Matcher[no];
-		
-		Map<String, String> strexp = new HashMap<String, String>();
+
+		String recordReg = "  <record>";
+		Pattern recordPattern = Pattern.compile(recordReg);
+
 		String regexpr = "    <dim(Entity|Structure).(.*)>(.*)</.*";
 		Pattern pattern = Pattern.compile(regexpr);
-		
-//		regExpressions[ 0 ]="    <dimEntity.structureId>(.*)</dimEntity.structureId>";
-//		regExpressions[ 1 ]=" 	 <dimEntity.chainId>(.*)</dimEntity.chainId>";
-//		regExpressions[ 2 ]="    <dimStructure.experimentalTechnique>(.*)</dimStructure.experimentalTechnique>";
-//		regExpressions[ 3 ]="    <dimStructure.releaseDate>(.*)</dimStructure.releaseDate>";
-//		regExpressions[ 4 ]="    <dimStructure.resolution>(.*)</dimStructure.resolution>";
-//		regExpressions[ 5 ]="    <dimStructure.residueCount>(.*)</dimStructure.residueCount>";
-//		regExpressions[ 6 ]="    <dimEntity.chainLength>(.*)</dimEntity.chainLength>";
-//		regExpressions[ 7 ]="    <dimEntity.secondaryStructure>(.*)<dimEntity.secondaryStructure>";
-//		regExpressions[ 8 ]="    <dimStructure.citationAuthor>(.*)<dimStructure.citationAuthor>";
-//		regExpressions[ 9 ]="    <dimStructure.publicationYear>(.*)<dimStructure.publicationYear";
-//		regExpressions[ 10 ]="    <dimStructure.journalName>(.*)</dimStructure.journalName>";
-//		regExpressions[ 11 ]="    <dimStructure.volumeId>(.*)</dimStructure.volumeId>";
-//		regExpressions[ 12 ]="    <dimStructure.firstPage>(.*)</dimStructure.firstPage>";
-//		regExpressions[ 13 ]="    <dimStructure.lastPage>(.*)</dimStructure.lastPage>";
-//		regExpressions[ 14 ]="    <dimStructure.doi>(.*)</dimStructure.doi>";
-//		
 
 		FileReader xmlfr = new FileReader(output);
 		BufferedReader xmlbr = new BufferedReader(xmlfr);
-		PDB tmpPDB = new PDB(null, null, null, null, null, null, null,null,null,null,null,null,null,null);
-		while( (linex = xmlbr.readLine()) != null){
+
+		while ((linex = xmlbr.readLine()) != null) {
+			Matcher matchRecord = recordPattern.matcher(linex);
 			Matcher match = pattern.matcher(linex);
-			if(match.matches()){
-				System.out.println(match.group(2) + "\t" + match.group(3));
+		//	System.out.println(linex);
+
+			if (match.matches()) {
+				strexp.put(match.group(2), match.group(3));
 			}
 
-			
+			if (strexp.size() == 16) {
+				PDB record = new PDB(null, null, null, null, null, null, null,
+						null, null, null, null, null, null, null, null, null);
+				for(String a : arguments){
+					//System.out.println(a + "\t" + strexp.get(a));
+					if( (!a.equals("citationAuthor")) && strexp.get(a)!=null){
+						record.SetArguments(a,strexp.get(a));
+					}
+					if( a.equals("citationAuthor")){
+						record.SetArguments(a, fix_author(strexp.get(a)));
+					}
+				}
+				records.add(record);
+				strexp = new HashMap<String, String>();
+			}
 		}
-		xmlbr.close();
-	}
+		System.out.println("structureId  & experimentalTechnique & resolution & releaseDate  & residueNumber & secondaryStructure  &  doi");
 
+		Map <String, Set<String>> doiPDBs = new HashMap<String, Set<String>>();
+		
+		xmlbr.close();
+		for(PDB record : records){
+			if(record.getResidueCount()!=null)
+				if(Integer.parseInt(record.getResidueCount()) > 42 ){ 
+					System.out.print("@Article{");
+					System.out.println(record);
+				
+			
+					if(doiPDBs.containsKey(record.getDoi())){
+						doiPDBs.get(record.getDoi()).add(record.getStructureId());
+					}else{
+						Set<String> temppdb = new HashSet<String>();
+						temppdb.add(record.getStructureId());
+						doiPDBs.put(record.getDoi(), temppdb);
+					}
+			}
+		}
+		
+		System.out.println(records.size());
+		for(String s : doiPDBs.keySet()){
+			if(doiPDBs.get(s).size() > 1)
+				System.out.println(s + "\t" + doiPDBs.get(s));
+		}
+	}
+	
+	public static String fix_author(String authors){
+		String author[] = authors.split(",");
+		String newauthor[] = new String[author.length];
+		
+		String a = "";
+		for(Integer i=0; i<author.length; i+=2){
+			if(!a.isEmpty())
+				a += " and ";
+			newauthor[i] = author[i+1];
+			newauthor[i+1] = author[i];
+			a = a + newauthor[i] + " " + newauthor[i+1];
+		}
+		//System.out.println(a);
+		return a;	
+	}
+	
 }
